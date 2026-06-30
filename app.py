@@ -12,7 +12,7 @@ from scipy.ndimage import gaussian_filter1d
 from sklearn.impute import SimpleImputer
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.preprocessing import StandardScaler
-from io import BytesIO
+from io import BytesI
 import os
 
 # Page configuration
