@@ -15,8 +15,106 @@ from sklearn.preprocessing import StandardScaler
 from io import BytesIO
 import os
 
-# Page configuration
-st.set_page_config(page_title="Outlier Detector Pro", layout="wide", page_icon="🔍")
+# ============================================================
+# PAGE CONFIGURATION
+# ============================================================
+st.set_page_config(
+    page_title="Outlier Detector Pro", 
+    layout="wide", 
+    page_icon="🔍",
+    initial_sidebar_state="expanded"
+)
+
+# ============================================================
+# DARK MODE CSS STYLES
+# ============================================================
+
+DARK_MODE_CSS = """
+<style>
+/* Dark Mode Styles */
+[data-theme="dark"] .stApp {
+    background-color: #0e1117;
+    color: #fafafa;
+}
+
+[data-theme="dark"] .stSidebar {
+    background-color: #1a1d21;
+    color: #fafafa;
+}
+
+[data-theme="dark"] .stMarkdown {
+    color: #fafafa;
+}
+
+[data-theme="dark"] .stMetric {
+    background-color: #1a1d21;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+[data-theme="dark"] .stDataFrame {
+    background-color: #1a1d21;
+    color: #fafafa;
+}
+
+[data-theme="dark"] .stButton > button {
+    background-color: #2d333b;
+    color: #fafafa;
+    border: 1px solid #4a5568;
+}
+
+[data-theme="dark"] .stButton > button:hover {
+    background-color: #4a5568;
+}
+
+[data-theme="dark"] .stSelectbox > div > div {
+    background-color: #1a1d21;
+    color: #fafafa;
+}
+
+[data-theme="dark"] .stSlider > div > div > div {
+    background-color: #2d333b;
+}
+
+[data-theme="dark"] .stCheckbox > label > div > div {
+    background-color: #2d333b;
+}
+
+[data-theme="dark"] .stExpander {
+    background-color: #1a1d21;
+    color: #fafafa;
+}
+
+[data-theme="dark"] .stAlert {
+    background-color: #1a1d21;
+    color: #fafafa;
+}
+
+[data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3 {
+    color: #fafafa;
+}
+
+/* Light Mode Styles (Default) */
+[data-theme="light"] .stApp {
+    background-color: #ffffff;
+    color: #262730;
+}
+
+[data-theme="light"] .stSidebar {
+    background-color: #f0f2f6;
+    color: #262730;
+}
+</style>
+"""
+
+# Apply CSS
+st.markdown(DARK_MODE_CSS, unsafe_allow_html=True)
+
+# ============================================================
+# THEME TOGGLE (Initialize in session state)
+# ============================================================
+if 'theme' not in st.session_state:
+    st.session_state['theme'] = 'light'
 
 # ============================================================
 # HELPER FUNCTIONS
@@ -52,6 +150,27 @@ def fig_to_bytes_plotly(fig, format='png', scale=2):
         st.warning(f"Plotly export requires kaleido package: {e}")
         return None
 
+def get_theme_colors():
+    """Get colors based on current theme"""
+    if st.session_state['theme'] == 'dark':
+        return {
+            'bg': '#0e1117',
+            'text': '#fafafa',
+            'normal': '#1f77b4',
+            'outlier': '#d62728',
+            'grid': '#4a5568',
+            'axis': '#fafafa'
+        }
+    else:
+        return {
+            'bg': '#ffffff',
+            'text': '#262730',
+            'normal': '#1f77b4',
+            'outlier': '#d62728',
+            'grid': '#e0e0e0',
+            'axis': '#262730'
+        }
+
 # ============================================================
 # TOOLTIP DICTIONARY (All in English)
 # ============================================================
@@ -79,12 +198,28 @@ TOOLTIPS = {
 }
 
 # ============================================================
-# PAGE TITLE
+# PAGE TITLE & THEME TOGGLE
 # ============================================================
 
-st.title("🔍 Ultimate Outlier Detector")
-st.markdown("### Mahalanobis Analysis with Filtering, Clustering, and Multi-Format Export")
+# Theme toggle at the top
+theme_col1, theme_col2 = st.columns([4, 1])
+
+with theme_col1:
+    st.title("🔍 Ultimate Outlier Detector")
+    st.markdown("### Mahalanobis Analysis with Filtering, Clustering, and Multi-Format Export")
+
+with theme_col2:
+    st.markdown("<br>", unsafe_allow_html=True)
+    is_dark = st.toggle("🌙 Dark Mode", value=(st.session_state['theme'] == 'dark'))
+    if is_dark:
+        st.session_state['theme'] = 'dark'
+    else:
+        st.session_state['theme'] = 'light'
+
 st.markdown("---")
+
+# Apply theme attribute to HTML
+st.markdown(f'<div data-theme="{st.session_state["theme"]}">', unsafe_allow_html=True)
 
 # ============================================================
 # SIDEBAR - DATA INPUT
@@ -100,7 +235,7 @@ with st.sidebar:
         help="Supports CSV and Excel (XLSX/XLS) formats"
     )
     
-    with st.expander("⚙️ Advanced Load Settings"):
+    with st.expander("️ Advanced Load Settings"):
         header_row_idx = st.number_input("Header Row Index", 0, 10, 0)
         encoding_option = st.selectbox("Encoding (CSV only)", ["Auto / UTF-8", "ISO-8859-1", "cp1252"])
         
@@ -109,7 +244,7 @@ with st.sidebar:
         skip_rows_excel = st.number_input("Skip Rows (Excel)", 0, 20, 0)
 
     st.markdown("---")
-    st.header("⚙️ 2. Analysis Configuration")
+    st.header("️ 2. Analysis Configuration")
 
 # ============================================================
 # MAIN LOGIC
@@ -134,13 +269,26 @@ if uploaded_file is not None:
             )
             file_type = "Excel"
         else:
-            st.error("Unsupported file type")
+            st.error("❌ Unsupported file type. Please upload CSV or Excel files only.")
+            st.stop()
+            
+        # Check if file is empty
+        if df_raw.empty:
+            st.error("❌ The uploaded file is empty.")
+            st.stop()
+            
+        # Check if there are enough columns
+        if len(df_raw.columns) < 2:
+            st.error("❌ The file must contain at least 2 columns.")
             st.stop()
             
         st.success(f"✅ Loaded {file_type}: {uploaded_file.name} ({len(df_raw):,} rows, {len(df_raw.columns)} columns)")
         
+    except UnicodeDecodeError as e:
+        st.error(f"❌ Encoding error: {str(e)}. Try selecting a different encoding option.")
+        st.stop()
     except Exception as e:
-        st.error(f"Error loading file: {e}")
+        st.error(f"❌ Error loading file: {type(e).__name__}: {str(e)}")
         st.stop()
 
     # ============================================================
@@ -220,7 +368,7 @@ if uploaded_file is not None:
             help=TOOLTIPS["Smoothing Sigma"]
         )
         quantile_target = st.slider(
-            f"Target Quantile (%) {info_icon('🛈')}", 
+            f"Target Quantile (%) {info_icon('')}", 
             80, 99, 95, 1,
             help=TOOLTIPS["Target Quantile"]
         )
@@ -257,7 +405,7 @@ if uploaded_file is not None:
         )
         if cluster_algo == "K-Means":
             k_clusters = st.sidebar.slider(
-                f"Number of Clusters (K) {info_icon('🛈')}", 
+                f"Number of Clusters (K) {info_icon('')}", 
                 2, 10, 3,
                 help=TOOLTIPS["K-Means"]
             )
@@ -278,11 +426,15 @@ if uploaded_file is not None:
     st.sidebar.markdown("---")
     if st.sidebar.button("🚀 Run Analysis", type="primary", use_container_width=True):
         if len(selected_cols) < 2:
-            st.error("Select at least 2 numeric variables.")
+            st.error("❌ Select at least 2 numeric variables.")
         else:
             with st.spinner('🧮 Calculating Statistics...'):
-                # 1. Prep
                 df_work = df[selected_cols].copy()
+                
+                # Check if there are enough rows
+                if len(df_work) < 10:
+                    st.error("❌ Not enough data points. Need at least 10 rows.")
+                    st.stop()
                 
                 # Auto Clean
                 if auto_clean:
@@ -300,30 +452,73 @@ if uploaded_file is not None:
                         df_work[num_cols_work] = imputer.fit_transform(df_work[num_cols_work])
                     df_work.dropna(inplace=True)
 
-                if len(df_work) < 5:
-                    st.error("Not enough data points.")
+                # Check if enough rows remain after cleaning
+                if len(df_work) < 10:
+                    st.error("❌ Not enough data points after cleaning. Need at least 10 rows.")
+                    st.stop()
+
+                # Check variance - remove columns with constant values
+                constant_cols = [c for c in df_work.select_dtypes(include=np.number).columns if df_work[c].std() == 0]
+                if constant_cols:
+                    st.warning(f"⚠️ The following columns have constant values and will be removed: {', '.join(constant_cols)}")
+                    df_work = df_work.drop(columns=constant_cols)
+                    
+                if len(df_work.select_dtypes(include=np.number).columns) < 2:
+                    st.error("❌ Need at least 2 numeric variables with variance.")
                     st.stop()
 
                 # Log Transform
                 if use_log:
                     num_cols_log = df_work.select_dtypes(include=np.number).columns
+                    cols_to_transform = []
                     for c in num_cols_log:
                         if (df_work[c] > 0).all():
-                            df_work[c] = np.log1p(df_work[c])
+                            cols_to_transform.append(c)
+                        else:
+                            st.warning(f"⚠️ Column '{c}' contains zero or negative values. Log transform skipped for this column.")
+                    
+                    for c in cols_to_transform:
+                        df_work[c] = np.log1p(df_work[c])
 
-                # Mahalanobis
+                # Mahalanobis with additional checks
                 try:
                     df_encoded = pd.get_dummies(df_work, drop_first=True, dtype=int)
+                    
+                    # Check if there are enough columns after encoding
+                    if df_encoded.shape[1] < 2:
+                        st.error("❌ Not enough features after encoding. Need at least 2 features.")
+                        st.stop()
+                        
+                    # Check if there are enough rows relative to columns
+                    if df_encoded.shape[0] <= df_encoded.shape[1]:
+                        st.error(f"❌ Not enough observations ({df_encoded.shape[0]}) for {df_encoded.shape[1]} features. Need more rows than columns.")
+                        st.stop()
+                    
                     data = df_encoded.values
                     mu = np.mean(data, axis=0)
                     cov = np.cov(data.T)
+                    
+                    # Check if cov is a valid matrix
+                    if np.isnan(cov).any() or np.isinf(cov).any():
+                        st.error("❌ Covariance matrix contains NaN or Inf values. Check your data.")
+                        st.stop()
+                    
                     inv_cov = pinv(cov)
                     distances = df_encoded.apply(
                         lambda row: distance.mahalanobis(row.values, mu, inv_cov), 
                         axis=1
                     )
+                    
+                    # Check if there are invalid values in distances
+                    if distances.isna().any() or distances.isin([np.inf, -np.inf]).any():
+                        st.warning("⚠️ Some Mahalanobis distances are NaN or Inf. These will be replaced with 0.")
+                        distances = distances.fillna(0).replace([np.inf, -np.inf], 0)
+                        
+                except np.linalg.LinAlgError as e:
+                    st.error(f"❌ Linear algebra error in Mahalanobis calculation: {str(e)}")
+                    st.stop()
                 except Exception as e:
-                    st.error(f"Calculation Error: {e}")
+                    st.error(f"❌ Calculation Error: {type(e).__name__}: {str(e)}")
                     st.stop()
                 
                 dims = df_encoded.shape[1]
@@ -344,11 +539,25 @@ if uploaded_file is not None:
                     scaled_data = scaler.fit_transform(df_encoded)
                     
                     if cluster_algo == "K-Means":
-                        model = KMeans(n_clusters=k_clusters, random_state=42, n_init=10)
+                        # Check if k_clusters is reasonable
+                        if k_clusters >= len(df_encoded):
+                            st.error(f"❌ Number of clusters ({k_clusters}) must be less than number of observations ({len(df_encoded)}).")
+                            st.stop()
+                            
+                        model = KMeans(n_clusters=k_clusters, random_state=42, n_init=10, max_iter=300)
                         labels = model.fit_predict(scaled_data)
                     else:  # DBSCAN
+                        # Check if eps is reasonable
+                        if eps_val <= 0:
+                            st.error("❌ Epsilon must be greater than 0.")
+                            st.stop()
+                            
                         model = DBSCAN(eps=eps_val, min_samples=min_samples_val)
                         labels = model.fit_predict(scaled_data)
+                        
+                        # Check if all points were labeled as noise
+                        if (labels == -1).all():
+                            st.warning("⚠️ All points were labeled as noise. Try increasing epsilon or decreasing min_samples.")
                     
                     df_res['Cluster'] = labels.astype(str)
                     if cluster_algo == "DBSCAN":
@@ -395,6 +604,7 @@ if uploaded_file is not None:
         sigma_val = st.session_state['sigma_val']
         q_target = st.session_state['quantile_target'] / 100.0
         outlier_stats = st.session_state['outlier_stats']
+        theme_colors = get_theme_colors()
         
         # ============================================================
         # METRICS DASHBOARD - OUTLIER COUNT
@@ -514,7 +724,9 @@ if uploaded_file is not None:
         
         # Data Subset
         if len(res) > limit_plot:
-            df_viz_base = res.sample(limit_plot, random_state=42)
+            if limit_plot > len(res):
+                limit_plot = len(res)
+            df_viz_base = res.sample(n=limit_plot, random_state=42)
             st.caption(f"Showing sample of **{limit_plot:,}** points out of {total_points:,}")
         else:
             df_viz_base = res
@@ -523,7 +735,7 @@ if uploaded_file is not None:
         # Define Palette
         custom_palette = None
         if color_by == "Status_Global":
-            custom_palette = {'Normal': '#1f77b4', 'Outlier': '#d62728'}
+            custom_palette = {'Normal': theme_colors['normal'], 'Outlier': theme_colors['outlier']}
         elif color_by == "Cluster" and 'Noise' in res['Cluster'].unique():
             unique_clusters = sorted(res['Cluster'].unique())
             pal = sns.color_palette("tab10", len(unique_clusters)).as_hex()
@@ -533,7 +745,7 @@ if uploaded_file is not None:
 
         # Helper function for export button
         def render_export_button(fig, fig_name, fig_type='matplotlib'):
-            """Render download button for a figure"""
+            """Render download button for a figure with error handling"""
             format_lower = export_format.lower()
             mime_types = {
                 'png': 'image/png',
@@ -541,24 +753,27 @@ if uploaded_file is not None:
                 'pdf': 'application/pdf'
             }
             
-            if fig_type == 'matplotlib':
-                buf = fig_to_bytes_matplotlib(fig, format=format_lower, dpi=export_dpi)
-                if buf:
-                    st.download_button(
-                        label=f"📥 Download {fig_name}.{format_lower}",
-                        data=buf,
-                        file_name=f"{fig_name}.{format_lower}",
-                        mime=mime_types[format_lower]
-                    )
-            elif fig_type == 'plotly':
-                buf = fig_to_bytes_plotly(fig, format=format_lower, scale=2)
-                if buf:
-                    st.download_button(
-                        label=f"📥 Download {fig_name}.{format_lower}",
-                        data=buf,
-                        file_name=f"{fig_name}.{format_lower}",
-                        mime=mime_types[format_lower]
-                    )
+            try:
+                if fig_type == 'matplotlib':
+                    buf = fig_to_bytes_matplotlib(fig, format=format_lower, dpi=export_dpi)
+                    if buf:
+                        st.download_button(
+                            label=f"📥 Download {fig_name}.{format_lower}",
+                            data=buf,
+                            file_name=f"{fig_name}.{format_lower}",
+                            mime=mime_types[format_lower]
+                        )
+                elif fig_type == 'plotly':
+                    buf = fig_to_bytes_plotly(fig, format=format_lower, scale=2)
+                    if buf:
+                        st.download_button(
+                            label=f" Download {fig_name}.{format_lower}",
+                            data=buf,
+                            file_name=f"{fig_name}.{format_lower}",
+                            mime=mime_types[format_lower]
+                        )
+            except Exception as e:
+                st.error(f"❌ Export error: {type(e).__name__}: {str(e)}")
 
         # ============================================================
         # VISUALIZATION MODES
@@ -616,7 +831,6 @@ if uploaded_file is not None:
         # 2. ADAPTIVE SMOOTHING
         elif plot_type == "Adaptive Boundary (Smooth Line)":
             if len(numeric_cols) > 0:
-                # Tooltip for adaptive boundary
                 with st.expander(f"ℹ️ What is Adaptive Boundary?"):
                     st.markdown(TOOLTIPS["Adaptive Boundary"])
                 
@@ -626,18 +840,37 @@ if uploaded_file is not None:
                 with yc:
                     df_sorted = res.sort_values(by=sort_col).copy()
                     
-                    min_win = max(2, int(len(df_sorted) * 0.05))
-                    rolling = max(5, min_win)
+                    # Check if there are enough data points
+                    if len(df_sorted) < 10:
+                        st.error("❌ Not enough data points for adaptive boundary. Need at least 10 rows.")
+                        st.stop()
                     
-                    raw_line = df_sorted['Mahalanobis_Dist'].rolling(
-                        window=rolling, center=True
-                    ).quantile(q_target)
-                    raw_line = raw_line.bfill().ffill()
+                    # Calculate safe window size
+                    window_size = max(5, int(len(df_sorted) * 0.05))
+                    if window_size >= len(df_sorted):
+                        window_size = len(df_sorted) // 2
+                    
+                    rolling = max(3, window_size)
                     
                     try:
-                        smoothed = gaussian_filter1d(raw_line.values, sigma=sigma_val)
-                    except:
-                        smoothed = raw_line.values
+                        raw_line = df_sorted['Mahalanobis_Dist'].rolling(
+                            window=rolling, center=True, min_periods=1
+                        ).quantile(q_target)
+                        raw_line = raw_line.bfill().ffill()
+                        
+                        # Check if sigma is reasonable
+                        max_sigma = len(df_sorted) // 4
+                        if sigma_val > max_sigma:
+                            st.warning(f"⚠️ Sigma value ({sigma_val}) is too high for this dataset. Using {max_sigma} instead.")
+                            actual_sigma = max_sigma
+                        else:
+                            actual_sigma = sigma_val
+                        
+                        smoothed = gaussian_filter1d(raw_line.values, sigma=actual_sigma)
+                        
+                    except Exception as e:
+                        st.error(f"❌ Error in smoothing: {type(e).__name__}: {str(e)}")
+                        st.stop()
                     
                     df_sorted['Smooth_Threshold'] = smoothed
                     df_sorted['Status_Adaptive'] = np.where(
@@ -651,10 +884,11 @@ if uploaded_file is not None:
                     else:
                         df_viz_ad = df_sorted
 
-                    fig, ax = plt.subplots(figsize=(12, 6))
+                    fig, ax = plt.subplots(figsize=(12, 6), facecolor=theme_colors['bg'])
+                    ax.set_facecolor(theme_colors['bg'])
                     
                     hue = 'Status_Adaptive' if color_by == "Status_Global" else color_by
-                    pal = {'Normal': '#1f77b4', 'Outlier': '#d62728'} if hue == 'Status_Adaptive' else custom_palette
+                    pal = {'Normal': theme_colors['normal'], 'Outlier': theme_colors['outlier']} if hue == 'Status_Adaptive' else custom_palette
 
                     sns.scatterplot(
                         data=df_viz_ad, x=sort_col, y='Mahalanobis_Dist', 
@@ -668,7 +902,10 @@ if uploaded_file is not None:
                     )
                     
                     ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
-                    ax.set_title(f"Adaptive Boundary Analysis (σ={sigma_val}, Quantile={q_target*100:.0f}%)")
+                    ax.set_title(f"Adaptive Boundary Analysis (σ={sigma_val}, Quantile={q_target*100:.0f}%)", color=theme_colors['text'])
+                    ax.set_xlabel(sort_col, color=theme_colors['text'])
+                    ax.set_ylabel("Mahalanobis Distance", color=theme_colors['text'])
+                    ax.tick_params(colors=theme_colors['text'])
                     add_fine_grid(ax)
                     plt.tight_layout()
                     st.pyplot(fig)
@@ -685,13 +922,18 @@ if uploaded_file is not None:
                 x_var = c1.selectbox("X Axis:", numeric_cols, index=0)
                 y_var = c2.selectbox("Y Axis:", numeric_cols, index=1)
                 
-                fig, ax = plt.subplots(figsize=(10, 6))
+                fig, ax = plt.subplots(figsize=(10, 6), facecolor=theme_colors['bg'])
+                ax.set_facecolor(theme_colors['bg'])
+                
                 sns.scatterplot(
                     data=df_viz_base, x=x_var, y=y_var, 
                     hue=color_by, palette=custom_palette, alpha=0.6, s=30, ax=ax
                 )
                 
-                ax.set_title(f"Scatter: {x_var} vs {y_var}")
+                ax.set_title(f"Scatter: {x_var} vs {y_var}", color=theme_colors['text'])
+                ax.set_xlabel(x_var, color=theme_colors['text'])
+                ax.set_ylabel(y_var, color=theme_colors['text'])
+                ax.tick_params(colors=theme_colors['text'])
                 ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
                 add_fine_grid(ax)
                 plt.tight_layout()
@@ -708,13 +950,16 @@ if uploaded_file is not None:
                 fig, axes = plt.subplots(
                     len(numeric_cols), 1, 
                     figsize=(10, 4 * len(numeric_cols)), 
-                    constrained_layout=True
+                    constrained_layout=True,
+                    facecolor=theme_colors['bg']
                 )
                 if len(numeric_cols) == 1: 
                     axes = [axes]
                 
                 for i, col in enumerate(numeric_cols):
                     ax = axes[i]
+                    ax.set_facecolor(theme_colors['bg'])
+                    
                     sns.scatterplot(
                         data=df_viz_base, x=col, y='Mahalanobis_Dist', 
                         hue=color_by, palette=custom_palette, alpha=0.6, ax=ax
@@ -723,8 +968,10 @@ if uploaded_file is not None:
                         global_thresh, color='black', linestyle='--', 
                         label=f'Global Threshold ({global_thresh:.2f})'
                     )
-                    ax.set_ylabel("Mahalanobis Distance")
-                    ax.set_title(f"Distance vs {col}")
+                    ax.set_ylabel("Mahalanobis Distance", color=theme_colors['text'])
+                    ax.set_xlabel(col, color=theme_colors['text'])
+                    ax.set_title(f"Distance vs {col}", color=theme_colors['text'])
+                    ax.tick_params(colors=theme_colors['text'])
                     
                     if i == 0: 
                         ax.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
@@ -779,7 +1026,10 @@ if uploaded_file is not None:
                 for c in numeric_cols:
                     m = res[c].mean()
                     s = res[c].std()
-                    z_scores[c] = (top_row[c] - m) / s if s > 0 else 0
+                    if s > 0 and not pd.isna(top_row[c]):
+                        z_scores[c] = (top_row[c] - m) / s
+                    else:
+                        z_scores[c] = 0
                 
                 df_z = pd.DataFrame(list(z_scores.items()), columns=['Var', 'Z'])
                 df_z['Abs'] = df_z['Z'].abs()
@@ -838,13 +1088,11 @@ if uploaded_file is not None:
             )
         
         with dl_col2:
-            # Excel export
             try:
                 excel_buffer = BytesIO()
                 with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
                     res.to_excel(writer, sheet_name='Results', index=False)
                     
-                    # Add summary sheet
                     summary_df = pd.DataFrame([
                         {'Metric': 'Total Observations', 'Value': outlier_stats['total']},
                         {'Metric': 'Outliers Detected', 'Value': outlier_stats['outliers']},
@@ -855,17 +1103,16 @@ if uploaded_file is not None:
                     summary_df.to_excel(writer, sheet_name='Summary', index=False)
                 
                 st.download_button(
-                    label="📊 Download Results (Excel)", 
+                    label=" Download Results (Excel)", 
                     data=excel_buffer.getvalue(), 
                     file_name="outlier_analysis_results.xlsx", 
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )
+            except ImportError:
+                st.warning("⚠️ Excel export requires 'openpyxl' package. Install with: pip install openpyxl")
             except Exception as e:
-                st.warning(f"Excel export unavailable: {e}")
-        
-        # TODO Section 2: Error fixes placeholder
-        # TODO Section 6: Additional statistical tools placeholder
+                st.warning(f"⚠️ Excel export unavailable: {type(e).__name__}: {str(e)}")
 
 else:
     st.info("👆 Upload a CSV or Excel file to start the analysis.")
@@ -878,18 +1125,22 @@ else:
     **Ultimate Outlier Detector** is an advanced multivariate outlier detection tool based on 
     **Mahalanobis Distance**, specifically designed for market data analysis (such as used vehicles).
     
-    #### ✨ Key Features:
+    ####  Key Features:
     - 🎯 **Multivariate Outlier Detection** - Accounts for correlations between variables
     - 📊 **CSV and Excel Support** - Flexible data loading
     - 🎨 **Advanced Visualizations** - 7 different display modes
-    - 🤖 **Clustering** - K-Means and DBSCAN for sub-population identification
-    - 📈 **Adaptive Boundary** - Dynamic boundary for heteroscedastic data
+    -  **Clustering** - K-Means and DBSCAN for sub-population identification
+    -  **Adaptive Boundary** - Dynamic boundary for heteroscedastic data
     - 📥 **Multi-Format Export** - PNG, JPEG, PDF, CSV, Excel
+    - 🌙 **Dark Mode** - Toggle between light and dark themes
     
-    #### 📚 Key Concepts (See tooltips in sidebar):
+    ####  Key Concepts (See tooltips in sidebar):
     - Mahalanobis Distance
     - Log Transform
     - K-Means / DBSCAN Clustering
     - Adaptive Boundary
     - Global Sensitivity Threshold
     """)
+
+# Close theme div
+st.markdown('</div>', unsafe_allow_html=True)
