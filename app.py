@@ -29,10 +29,7 @@ def add_fine_grid(ax):
     ax.grid(True, which='minor', linestyle=':', linewidth=0.4, alpha=0.3)
 
 def info_icon(text, label="ℹ️"):
-    """
-    Creates an info icon with tooltip using Streamlit's help parameter.
-    Returns empty string to embed inline via st.markdown with write.
-    """
+    """Creates an info icon with tooltip"""
     return label
 
 def tooltip(label, text):
@@ -56,29 +53,29 @@ def fig_to_bytes_plotly(fig, format='png', scale=2):
         return None
 
 # ============================================================
-# TOOLTIP DICTIONARY (Section 3)
+# TOOLTIP DICTIONARY (All in English)
 # ============================================================
 
 TOOLTIPS = {
-    "Log Transform": "טרנספורמציה לוגריתמית (log1p) שמנרמלת התפלגויות עם הטיה חיובית חזקה (right-skewed). מקטינה את השפעת ערכי קיצון והופכת את הנתונים לקרובים יותר להתפלגות נורמלית - קריטי לחישוב Mahalanobis Distance שמניח נורמליות.",
+    "Log Transform": "Logarithmic transformation (log1p) that normalizes distributions with strong positive skew (right-skewed). Reduces the influence of extreme values and makes the data closer to a normal distribution - critical for Mahalanobis Distance calculation which assumes normality.",
     
-    "K-Means": "אלגוריתם אשכולות (clustering) שמחלק את הנתונים ל-K קבוצות על ידי מזעור השונות התוך-קבוצתית. דורש הגדרה מראש של מספר האשכולות. יעיל לזיהוי תת-אוכלוסיות עם פרופילי חריגות שונים.",
+    "K-Means": "A clustering algorithm that partitions data into K groups by minimizing within-cluster variance. Requires pre-specification of the number of clusters. Effective for identifying sub-populations with different outlier profiles.",
     
-    "DBSCAN": "Density-Based Spatial Clustering. אלגוריתם מבוסס צפיפות שמזהה אוטומטית את מספר האשכולות ומסמן נקודות 'רועשות' (noise) שאינן שייכות לאף אשכול. מצוין לזיהוי חריגים מבניים.",
+    "DBSCAN": "Density-Based Spatial Clustering. A density-based algorithm that automatically identifies the number of clusters and marks 'noisy' points that don't belong to any cluster. Excellent for structural outlier detection.",
     
-    "Mahalanobis Distance": "מדד מרחק רב-ממדי שלוקח בחשבון את הקורלציות בין המשתנים (דרך מטריצת השונות-המשותפת ההופכית). בניגוד למרחק אוקלידי, הוא מזהה חריגים שנובעים משילובים נדירים של ערכים, גם אם כל ערך בנפרד נראה סביר.",
+    "Mahalanobis Distance": "A multivariate distance metric that accounts for correlations between variables (via the inverse covariance matrix). Unlike Euclidean distance, it identifies outliers resulting from rare combinations of values, even if each value appears normal individually.",
     
-    "Global Sensitivity": "אחוזון (percentile) של התפלגות חי-בריבוע (Chi-Square) שקובע את סף החריגות הגלובלי. 95% = 5% מהתצפיות יוגדרו כחריגים בהנחת נורמליות רב-ממדית.",
+    "Global Sensitivity": "Percentile of the Chi-Square distribution that sets the global outlier threshold. 95% = 5% of observations will be flagged as outliers under the assumption of multivariate normality.",
     
-    "Smoothing Sigma": "פרמטר σ של סינון גאוסיאני (Gaussian filter). ערך גבוה = קו גבול חלק יותר שמושפע מטווח רחב של נקודות. ערך נמוך = קו מגיב יותר לשינויים מקומיים.",
+    "Smoothing Sigma": "Parameter σ of Gaussian filtering. Higher value = smoother boundary line influenced by a wider range of points. Lower value = line more responsive to local changes.",
     
-    "Adaptive Boundary": "גבול חריגות דינמי שמשתנה לפי ערכי ציר ה-X (למשל, מחיר). שימושי כאשר שונות הנתונים משתנה (heteroscedasticity) - למשל, רכבים יקרים טבעיים שיהיו להם שאריות גדולות יותר.",
+    "Adaptive Boundary": "Dynamic outlier boundary that varies according to X-axis values (e.g., price). Useful when data variance changes (heteroscedasticity) - for example, expensive cars naturally tend to have larger residuals.",
     
-    "Target Quantile": "האחוזון של מרחקי Mahalanobis שישמש כבסיס לקו הגבול האדפטיבי. 95% = הקו יעבור מעל 95% מהנקודות בכל 'חלון' לאורך ציר ה-X.",
+    "Target Quantile": "The percentile of Mahalanobis distances used as the basis for the adaptive boundary line. 95% = the line will pass above 95% of points in each 'window' along the X-axis.",
     
-    "Impute": "אסטרטגיה למילוי ערכים חסרים: ממוצע (mean) רגיש לחריגים, חציון (median) עמיד יותר. Drop פשוט מסיר שורות עם ערכים חסרים.",
+    "Impute": "Strategy for handling missing values: Mean is sensitive to outliers, Median is more robust. Drop simply removes rows with missing values.",
     
-    "Auto-Clean Text": "מנקה אוטומטית טקסט (lowercase, strip) כדי למנוע כפילויות כמו 'Toyota' לעומת 'toyota ' שיוצרות קטגוריות נפרדות ב-one-hot encoding."
+    "Auto-Clean Text": "Automatically cleans text (lowercase, strip) to prevent duplicates like 'Toyota' vs 'toyota ' from creating separate categories in one-hot encoding."
 }
 
 # ============================================================
@@ -90,7 +87,7 @@ st.markdown("### Mahalanobis Analysis with Filtering, Clustering, and Multi-Form
 st.markdown("---")
 
 # ============================================================
-# SIDEBAR - DATA INPUT (Section 5: XLSX Support)
+# SIDEBAR - DATA INPUT
 # ============================================================
 
 with st.sidebar:
@@ -100,15 +97,15 @@ with st.sidebar:
     uploaded_file = st.file_uploader(
         "Upload Data File", 
         type=["csv", "xlsx", "xls"],
-        help="תומך ב-CSV, Excel (XLSX/XLS)"
+        help="Supports CSV and Excel (XLSX/XLS) formats"
     )
     
     with st.expander("⚙️ Advanced Load Settings"):
         header_row_idx = st.number_input("Header Row Index", 0, 10, 0)
-        encoding_option = st.selectbox("Encoding (CSV)", ["Auto / UTF-8", "ISO-8859-1", "cp1252"])
+        encoding_option = st.selectbox("Encoding (CSV only)", ["Auto / UTF-8", "ISO-8859-1", "cp1252"])
         
         # Excel-specific settings
-        excel_sheet = st.text_input("Sheet Name (Excel)", value="", help="השאר ריק לטעינת הגיליון הראשון")
+        excel_sheet = st.text_input("Sheet Name (Excel)", value="", help="Leave empty to load the first sheet")
         skip_rows_excel = st.number_input("Skip Rows (Excel)", 0, 20, 0)
 
     st.markdown("---")
@@ -119,7 +116,7 @@ with st.sidebar:
 # ============================================================
 
 if uploaded_file is not None:
-    # --- FILE LOADING (Section 5) ---
+    # --- FILE LOADING ---
     try:
         filename = uploaded_file.name.lower()
         
@@ -203,7 +200,7 @@ if uploaded_file is not None:
     selected_cols = st.sidebar.multiselect("Select Model Variables (Min 2):", all_cols, default=default_cols)
 
     # ============================================================
-    # THRESHOLDS & SETTINGS (with Tooltips - Section 3)
+    # THRESHOLDS & SETTINGS
     # ============================================================
     
     st.sidebar.markdown("---")
@@ -229,7 +226,7 @@ if uploaded_file is not None:
         )
 
     # ============================================================
-    # ADVANCED FEATURES (with Tooltips - Section 3)
+    # ADVANCED FEATURES
     # ============================================================
     
     st.sidebar.markdown("---")
@@ -358,7 +355,7 @@ if uploaded_file is not None:
                         df_res['Cluster'] = df_res['Cluster'].replace('-1', 'Noise')
 
                 # ============================================================
-                # SECTION 1: OUTLIER COUNT DISPLAY
+                # OUTLIER COUNT DISPLAY
                 # ============================================================
                 
                 # Calculate statistics
@@ -400,7 +397,7 @@ if uploaded_file is not None:
         outlier_stats = st.session_state['outlier_stats']
         
         # ============================================================
-        # SECTION 1: METRICS DASHBOARD - OUTLIER COUNT
+        # METRICS DASHBOARD - OUTLIER COUNT
         # ============================================================
         
         st.markdown("---")
@@ -499,7 +496,7 @@ if uploaded_file is not None:
             limit_plot = total_points
         
         # ============================================================
-        # SECTION 4: EXPORT FORMAT SELECTION
+        # EXPORT FORMAT SELECTION
         # ============================================================
         
         st.markdown("**📥 Export Settings:**")
@@ -509,7 +506,7 @@ if uploaded_file is not None:
             export_format = st.selectbox(
                 "Image Format:",
                 ["PNG", "JPEG", "PDF"],
-                help="PNG: איכות גבוהה עם שקיפות | JPEG: קובץ קטן | PDF: וקטורי לאיכות מקסימלית"
+                help="PNG: High quality with transparency | JPEG: Smaller file size | PDF: Vector format for maximum quality"
             )
         
         with exp_col2:
@@ -611,7 +608,7 @@ if uploaded_file is not None:
                     )
                     st.plotly_chart(fig, use_container_width=True)
                     
-                    # Export button (Section 4)
+                    # Export button
                     render_export_button(fig, "group_analysis", 'plotly')
                 else:
                     st.info("Please select at least one group.")
@@ -676,7 +673,7 @@ if uploaded_file is not None:
                     plt.tight_layout()
                     st.pyplot(fig)
                     
-                    # Export button (Section 4)
+                    # Export button
                     render_export_button(fig, "adaptive_boundary", 'matplotlib')
             else:
                 st.warning("No numeric variables.")
@@ -700,7 +697,7 @@ if uploaded_file is not None:
                 plt.tight_layout()
                 st.pyplot(fig)
                 
-                # Export button (Section 4)
+                # Export button
                 render_export_button(fig, f"scatter_{x_var}_vs_{y_var}", 'matplotlib')
             else:
                 st.warning("Need at least 2 numeric variables.")
@@ -738,7 +735,7 @@ if uploaded_file is not None:
                 
                 st.pyplot(fig)
                 
-                # Export button (Section 4)
+                # Export button
                 render_export_button(fig, "distance_vs_variables", 'matplotlib')
 
         # 5. PAIR PLOT
@@ -763,7 +760,7 @@ if uploaded_file is not None:
                 plt.tight_layout()
                 st.pyplot(g.fig)
                 
-                # Export button (Section 4)
+                # Export button
                 render_export_button(g.fig, "pairplot_matrix", 'matplotlib')
 
         # 6. CONTRIBUTION ANALYSIS
@@ -795,7 +792,7 @@ if uploaded_file is not None:
                 )
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # Export button (Section 4)
+                # Export button
                 render_export_button(fig, "outlier_contribution", 'plotly')
             else:
                 st.success("✅ No outliers found in the current analysis.")
@@ -816,7 +813,7 @@ if uploaded_file is not None:
                 )
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # Export button (Section 4)
+                # Export button
                 render_export_button(fig, "3d_scatter", 'plotly')
             else:
                 st.warning("Need 3+ numeric variables for 3D view.")
@@ -878,16 +875,16 @@ else:
     st.markdown("""
     ### 📖 About This Tool
     
-    **Ultimate Outlier Detector** הוא כלי מתקדם לזיהוי חריגים רב-ממדי המבוסס על 
-    **Mahalanobis Distance**, המותאם במיוחד לניתוח נתוני שוק (כמו רכבים יד שנייה).
+    **Ultimate Outlier Detector** is an advanced multivariate outlier detection tool based on 
+    **Mahalanobis Distance**, specifically designed for market data analysis (such as used vehicles).
     
     #### ✨ Key Features:
-    - 🎯 **זיהוי חריגים רב-ממדי** - לוקח בחשבון קורלציות בין משתנים
-    - 📊 **תמיכה ב-CSV ו-Excel** - טעינה גמישה של נתונים
-    - 🎨 **ויזואליזציות מתקדמות** - 7 מצבי תצוגה שונים
-    - 🤖 **Clustering** - K-Means ו-DBSCAN לזיהוי תת-אוכלוסיות
-    - 📈 **Adaptive Boundary** - גבול דינמי להטרוסקדסטיות
-    - 📥 **ייצוא רב-פורמטי** - PNG, JPEG, PDF, CSV, Excel
+    - 🎯 **Multivariate Outlier Detection** - Accounts for correlations between variables
+    - 📊 **CSV and Excel Support** - Flexible data loading
+    - 🎨 **Advanced Visualizations** - 7 different display modes
+    - 🤖 **Clustering** - K-Means and DBSCAN for sub-population identification
+    - 📈 **Adaptive Boundary** - Dynamic boundary for heteroscedastic data
+    - 📥 **Multi-Format Export** - PNG, JPEG, PDF, CSV, Excel
     
     #### 📚 Key Concepts (See tooltips in sidebar):
     - Mahalanobis Distance
